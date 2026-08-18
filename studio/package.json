@@ -1,7 +1,7 @@
 {
   "name": "virtual-tour-studio",
   "private": true,
-  "version": "1.1.1",
+  "version": "2.0.1",
   "main": "package.json",
   "license": "UNLICENSED",
   "scripts": {
@@ -11,25 +11,38 @@
     "deploy": "sanity deploy",
     "deploy-graphql": "sanity graphql deploy",
     "format": "pnpx prettier --write \"**/*.{md,css,js,ts,json}\" \"!node_modules/**\"",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typegen": "sanity schema extract && sanity typegen generate"
   },
   "keywords": [
     "sanity"
   ],
   "dependencies": {
-    "@sanity/vision": "^3.8.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "sanity": "^3.8.1",
-    "styled-components": "^6.1.13"
+    "@sanity/dashboard": "^6.0.14",
+    "@sanity/vision": "^6.9.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "sanity": "^6.9.1",
+    "sanity-plugin-dashboard-dad-jokes": "^2.0.0",
+    "sanity-plugin-media": "^6.1.1",
+    "styled-components": "^6.4.2"
   },
   "devDependencies": {
-    "@sanity/eslint-config-studio": "^5.0.1",
-    "@types/node": "^18.15.11",
-    "@types/react": "^18.0.25",
+    "@sanity/eslint-config-studio": "^6.0.0",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
     "eslint": "^9.14.0",
     "prettier": "^3.0.3",
-    "typescript": "^5.0.2"
+    "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "smol-toml": "^1.6.1",
+    "@module-federation/dts-plugin": {
+      "undici": ">=7.28.1 <8"
+    },
+    "typeid-js": {
+      "uuid": "^11.1.1"
+    }
   },
   "prettier": {
     "semi": false,
@@ -38,6 +51,6 @@
     "singleQuote": true
   },
   "engines": {
-    "node": ">= 14.18"
+    "node": ">=22.0.0"
   }
 }
