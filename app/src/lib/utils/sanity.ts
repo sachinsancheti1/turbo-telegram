@@ -80,8 +80,9 @@ export function virtualTourItem() {
 		    "id":_id,
 		    "name": title,
 		    caption,
-		    "panorama":image.asset->url + "?w=4096&q=75&auto=format",
-		    "thumbnail":image.asset->url + "?w=200&q=75&auto=format",
+		    "panorama":image.asset->url,
+		    "panoramaWidth":image.asset->metadata.dimensions.width,
+		    "thumbnail":image.asset->url + "?w=200&auto=format",
 		    description,
 		    "showInGallery": coalesce(showInGallery, true),
 		    "links": links[]{
