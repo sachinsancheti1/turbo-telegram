@@ -83,6 +83,14 @@ SANITY_STUDIO_DATASET=...
 - `sanity-plugin-media` for asset management
 - `SCHEMA_GUIDE.md` in `studio/` documents the content model for editors
 
+### Scene links, images, and caching
+
+- **`?node=` scene links** — `+page.server.ts` validates the param (`resolveInitialNodeId`) and passes `initialNodeId`; `+page.svelte` keeps the URL in sync with SvelteKit shallow routing (`pushState`/`replaceState`). The scene for each history entry must live in `page.state.nodeId`: shallow routing deliberately leaves `page.url` at the originally loaded URL, so reading the scene from `page.url` breaks Back. `Virtual.svelte` takes scene requests via its `nodeId` prop in a separate effect so they never rebuild the viewer.
+- **Shared views** (`?yaw=&pitch=&zoom=`, degrees; helpers in `lib/utils/view.ts`) apply only when `?node=` is valid, are applied once on the landing scene's first `node-changed`, and suppress autorotate auto-start. `handleNodeChange` strips `VIEW_PARAMS` so they never leak into later history entries. The Share button is a PSV custom navbar button; the page owns URL building and the share/clipboard logic (`handleShare`).
+- **Setup and error states** — `+page.server.ts` returns `setupIssue` (`no-tour-page` / `no-start-scene`) instead of throwing when the singleton or its Starting Node is missing; `virtualTourPageBlocks` is typed nullable for this. Setup responses are not edge-cached. `+error.svelte` covers 404s and Sanity outages. Setup copy uses the Studio's labels from `studio/deskStructure.ts` (Virtual Tour → Virtual Tour Section, "Starting Node"), so keep them in sync.
+- **Panorama URLs** go through `panoramaUrl()` (WebP, ≤8192px). Use `fm=webp`, not `auto=format`: PSV fetches without an Accept header, so `auto=format` returns JPEG. Hotspot `textureX/Y` are pixels on the *original* upload, so any resize must scale them too (`panoramaScale`, using `panoramaWidth` from the query).
+- **Caching** — the tour page sets a 60s edge cache in `+page.server.ts`; `/health` is intentionally uncached.
+
 ## Content Model Notes
 
 - `poseHeading` (number, default 180) — initial horizontal camera angle in degrees
@@ -95,5 +103,13 @@ SANITY_STUDIO_DATASET=...
 
 ## Known Issues / Tech Debt
 
-- **PSV chunk is large** — `@photo-sphere-viewer` bundles at ~630 kB (minified). Could be lazy-loaded with dynamic `import()` if initial page load becomes a concern.
-- **Sanity typegen partial** — `studio/sanity.types.ts` (generated via `npm run typegen` in studio/) only produces Sanity built-in types due to a `styled-components` multiple-instances conflict in the schema extractor (observed on Sanity v5; not yet re-tested since the v6 upgrade). GROQ result types are hand-written in `app/src/lib/types/sanity.ts` instead. Regenerate if schemas change.
+- **PSV is lazy-loaded** — `Virtual.svelte` dynamically imports all PSV modules inside its `$effect` (~630 kB chunk, kept out of the initial page bundle). Keep PSV imports there as `import type` only; a value import at the top of the file would pull the chunk back into the page bundle. Vite still prints a >500 kB chunk warning for it — expected.
+- **Sanity typegen broken upstream** — `npm run typegen` in studio/ produces only Sanity built-in types. Re-tested on Sanity 6.16 / CLI 8.13 (Sept 2026): `sanity schema extract` drops *every* custom type, even a one-field dummy document in a plugin-free config, while the config and schema files load without error — so it's a CLI extractor bug, not the styled-components warning it prints. GROQ result types stay hand-written in `app/src/lib/types/sanity.ts`; update them when schemas change.
+- **One upstream advisory** — `npm audit` in studio/ reports js-yaml 3.x inside `@sanity/cli` → `@vercel/frameworks` (dev CLI only). Never accept npm's `audit fix --force` suggestion: it downgrades `sanity` to 5.x.
+
+## CI & Maintenance
+
+- `.github/workflows/ci.yml` runs on every PR and push to main: app `npm test` + `check` + `build`, studio `build` (placeholder Sanity env vars — builds don't fetch data)
+- `.github/dependabot.yml` opens at most one monthly update PR each for app, studio, and GitHub Actions (every package, majors included, grouped per folder); let CI go green before merging. TypeScript major bumps are ignored in app/ until SvelteKit's peer range allows TypeScript 7 — remove that `ignore` entry once it does
+- Studio `package.json` has scoped npm `overrides` for transitive advisories. When changing a *nested* override, delete that package's entries from `package-lock.json` first — npm won't re-resolve an existing lockfile entry. Keep `studio/pnpm-lock.yaml` in sync with `pnpm install --lockfile-only`
+- `react` and `react-dom` must be the exact same version or the studio build and CLI fail
